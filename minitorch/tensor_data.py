@@ -91,7 +91,13 @@ def broadcast_index(
 
     """
     # TODO: Implement for Task 2.2.
-    raise NotImplementedError("Need to implement for Task 2.2")
+    ndiff = len(big_shape) - len(shape)
+
+    for i in range(len(shape) - 1, -1, -1):
+        if shape[i] == 1:
+            out_index[i] = 0
+        else:
+            out_index[i] = big_index[i + ndiff]
 
 
 def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
@@ -112,7 +118,24 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
 
     """
     # TODO: Implement for Task 2.2.
-    raise NotImplementedError("Need to implement for Task 2.2")
+    if len(shape1) > len(shape2):
+        shape1, shape2 = shape2, shape1
+
+    if len(shape1) < len(shape2):
+        shape1 = (1,) * (len(shape2) - len(shape1)) + tuple(shape1)
+
+    out_shape = []
+    for i in range(len(shape1)):
+        if shape1[i] == shape2[i]:
+            out_shape.append(shape1[i])
+        elif shape1[i] == 1:
+            out_shape.append(shape2[i])
+        elif shape2[i] == 1:
+            out_shape.append(shape1[i])
+        else:
+            raise IndexingError(f"Shapes {shape1} and {shape2} are not broadcastable.")
+
+    return tuple(out_shape)
 
 
 def strides_from_shape(shape: UserShape) -> UserStrides:
