@@ -47,7 +47,9 @@ def index_to_position(index: Index, strides: Strides) -> int:
 
     """
     # TODO: Implement for Task 2.1.
-    return index.dot(strides)
+    result = [index[i] * strides[i] for i in range(len(index))]
+
+    return sum(result)
 
 
 def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
