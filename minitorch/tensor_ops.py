@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Optional, Type
 
-import numpy as np
 from typing_extensions import Protocol
 
 from . import operators
@@ -274,7 +273,11 @@ def tensor_map(
         in_strides: Strides,
     ) -> None:
         # TODO: Implement for Task 2.3.
-        for i in range(np.prod(out_shape)):
+        out_len = 1
+        for i in range(len(out_shape)):
+            out_len *= out_shape[i]
+
+        for i in range(out_len):
             out_index = out_shape.copy()
             in_index = in_shape.copy()
             to_index(i, out_shape, out_index)
@@ -328,7 +331,10 @@ def tensor_zip(
         b_strides: Strides,
     ) -> None:
         # TODO: Implement for Task 2.3.
-        for i in range(np.prod(out_shape)):
+        out_len = 1
+        for i in range(len(out_shape)):
+            out_len *= out_shape[i]
+        for i in range(out_len):
             out_index = out_shape.copy()
             a_index = a_shape.copy()
             b_index = b_shape.copy()
@@ -371,8 +377,11 @@ def tensor_reduce(
         reduce_dim: int,
     ) -> None:
         # TODO: Implement for Task 2.3.
-        print(f"reduce: {out_shape}, {a_shape}, {reduce_dim}")
-        for i in range(np.prod(out_shape)):
+        out_len = 1
+        for i in range(len(out_shape)):
+            out_len *= out_shape[i]
+
+        for i in range(out_len):
             out_index = out_shape.copy()
             to_index(i, out_shape, out_index)
             a_index = out_index.copy()
