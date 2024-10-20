@@ -26,14 +26,12 @@ def central_difference(f: Any, *vals: Any, arg: int = 0, epsilon: float = 1e-6) 
 
     """
     # TODO: Implement for Task 1.1.
-
-    vals_list = list(vals)
-    vals_list[arg] += epsilon
-    f_forward = f(*vals_list)
-    vals_list[arg] -= 2 * epsilon
-    f_backward = f(*vals_list)
-    derivative = (f_forward - f_backward) / (2 * epsilon)
-    return derivative
+    vals1 = [v for v in vals]
+    vals2 = [v for v in vals]
+    vals1[arg] = vals1[arg] + epsilon
+    vals2[arg] = vals2[arg] - epsilon
+    delta = f(*vals1) - f(*vals2)
+    return delta / (2 * epsilon)
 
 
 variable_count = 1
@@ -80,21 +78,21 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
 
     """
     # TODO: Implement for Task 1.4.
-    topological_sorted = []
-    visited = set()
+    order = []
+    seen = set()
 
-    def dfs(node: Variable) -> None:
-        if node.unique_id in visited:
+    def visit(var: Variable) -> None:
+        if var.unique_id in seen or var.is_constant():
             return
-        visited.add(node.unique_id)
-        for parent in node.parents:
-            dfs(parent)
-        if not node.is_constant():
-            topological_sorted.append(node)
+        if not var.is_leaf():
+            for m in var.parents:
+                if not m.is_constant():
+                    visit(m)
+        seen.add(var.unique_id)
+        order.insert(0, var)
 
-    dfs(variable)
-
-    return reversed(topological_sorted)
+    visit(variable)
+    return order
 
 
 def backpropagate(variable: Variable, deriv: Any) -> None:
@@ -114,21 +112,19 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
     """
     # TODO: Implement for Task 1.4.
     # Perform a topological sort on the computational graph
-    topological_sorted = topological_sort(variable)
-
-    # Initialize a dictionary to store the derivatives of the scalar variables
-    derivatives = {variable.unique_id: deriv}
-
-    for node in topological_sorted:
-        if node.is_leaf():
-            node.accumulate_derivative(derivatives[node.unique_id])
+    queue = topological_sort(variable)
+    derivatives = {}
+    derivatives[variable.unique_id] = deriv
+    for var in queue:
+        deriv = derivatives[var.unique_id]
+        if var.is_leaf():
+            var.accumulate_derivative(deriv)
         else:
-            current_deriv = derivatives[node.unique_id]
-            for parent, local_grad in node.chain_rule(current_deriv):
-                if parent.unique_id in derivatives:
-                    derivatives[parent.unique_id] += local_grad
-                else:
-                    derivatives[parent.unique_id] = local_grad
+            for v, d in var.chain_rule(deriv):
+                if v.is_constant():
+                    continue
+                derivatives.setdefault(v.unique_id, 0.0)
+                derivatives[v.unique_id] = derivatives[v.unique_id] + d
 
 
 @dataclass

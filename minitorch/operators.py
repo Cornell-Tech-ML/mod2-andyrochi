@@ -142,7 +142,7 @@ def is_close(x: float, y: float) -> float:
         True if | x - y | < 1e-2. False otherwise.
 
     """
-    return abs(x - y) < 1e-2
+    return (x - y < 1e-2) and (y - x < 1e-2)
 
 
 # - sigmoid
@@ -174,10 +174,10 @@ def relu(x: float) -> float:
 
     Returns:
     -------
-        x if x >= 0. 0 otherwise
+        x if x > 0. 0 otherwise
 
     """
-    return x if x >= 0 else 0.0
+    return x if x > 0 else 0.0
 
 
 EPS = 1e-6
@@ -196,7 +196,7 @@ def log(x: float) -> float:
         natural logarithm of x
 
     """
-    return math.log(x)
+    return math.log(x + EPS)
 
 
 # - exp
@@ -262,7 +262,7 @@ def inv_back(x: float, y: float) -> float:
         derivative of reciprocal times y
 
     """
-    return -y / (x * x)
+    return -(1.0 / x**2) * y
 
 
 # - relu_back
@@ -323,21 +323,13 @@ def map(
 
     """
 
-    def inner(iterable: Iterable[float]) -> Iterable[float]:
-        """Applies a given function to each element of an iterable.
+    def _map(ls: Iterable[float]) -> Iterable[float]:
+        ret = []
+        for x in ls:
+            ret.append(func(x))
+        return ret
 
-        Args:
-        ----
-            iterable: An iterable of float values.
-
-        Returns:
-        -------
-            An iterable containing the results of applying func to each element.
-
-        """
-        return [func(x) for x in iterable]
-
-    return inner
+    return _map
 
 
 def zipWith(
