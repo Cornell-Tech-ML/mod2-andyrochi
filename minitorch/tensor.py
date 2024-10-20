@@ -395,36 +395,35 @@ class Tensor:
     def all(self, dim: Optional[int] = None) -> Tensor:
         """Check if all elements are true"""
         if dim is None:
-            for i in range(len(self.shape)):
-                self = All.apply(self, self._ensure_tensor(i))
-            return Tensor.make([self.item()], (1,), backend=self.backend)
+            return All.apply(self.contiguous().view(self.size), self._ensure_tensor(0))
         return All.apply(self, self._ensure_tensor(dim))
 
     def sum(self, dim: Optional[int] = None) -> Tensor:
         """Sum of tensor elements"""
         if dim is None:
-            for i in range(len(self.shape)):
-                self = Sum.apply(self, self._ensure_tensor(i))
-            return Tensor.make([self.item()], (1,), backend=self.backend)
+            return Sum.apply(self.contiguous().view(self.size), self._ensure_tensor(0))
         return Sum.apply(self, self._ensure_tensor(dim))
 
     def mean(self, dim: Optional[int] = None) -> Tensor:
         """Mean of tensor elements"""
         if dim is None:
-            for i in range(len(self.shape)):
-                self = Sum.apply(self, self._ensure_tensor(i))
-            self = self / self.size
-            return Tensor.make([self.item()], (1,), backend=self.backend)
-
+            sum_res = Sum.apply(
+                self.contiguous().view(self.size), self._ensure_tensor(0)
+            )
+            return sum_res / self.size
         return Sum.apply(self, self._ensure_tensor(dim)) / self.shape[dim]
 
     def permute(self, *dims: int) -> Tensor:
         """Permute tensor dimensions"""
-        return Permute.apply(self, Tensor.make(list(dims), (len(dims),)))
+        return Permute.apply(
+            self, Tensor.make(list(dims), (len(dims),), backend=self.backend)
+        )
 
     def view(self, *shape: int) -> Tensor:
         """Reshape tensor"""
-        return View.apply(self, Tensor.make(list(shape), (len(shape),)))
+        return View.apply(
+            self, Tensor.make(list(shape), (len(shape),), backend=self.backend)
+        )
 
     def zero_grad_(self) -> None:
         """Zero out the gradient"""

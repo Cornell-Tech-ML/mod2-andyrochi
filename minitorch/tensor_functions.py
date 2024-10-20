@@ -144,18 +144,19 @@ class Sigmoid(Function):
     @staticmethod
     def forward(ctx: Context, t1: Tensor) -> Tensor:
         """Sigmoid function"""
-        ctx.save_for_backward(t1)
-        return t1.f.sigmoid_map(t1)
+        res = t1.f.sigmoid_map(t1)
+        ctx.save_for_backward(res)
+        return res
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
         """Sigmoid function"""
-        (t1,) = ctx.saved_values
-        sig = t1.f.sigmoid_map(t1)
-        neg_sig = t1.f.neg_map(sig)
-        neg_sig = neg_sig.f.add_zip(neg_sig, 1.0)
-        sig = sig.f.mul_zip(sig, neg_sig)
-        return grad_output.f.mul_zip(grad_output, sig)
+        (res,) = ctx.saved_values
+        one_minus_res = res.f.neg_map(res)
+        ones = minitorch.Tensor.make([1.0], (1,), backend=res.backend)
+        one_minus_res = one_minus_res.f.add_zip(one_minus_res, ones)
+        res_one_res = res.f.mul_zip(res, one_minus_res)
+        return grad_output.f.mul_zip(grad_output, res_one_res)
 
 
 class ReLU(Function):
@@ -208,11 +209,11 @@ class Sum(Function):
         return t1.f.add_reduce(t1, int(dim.item()))
 
     @staticmethod
-    def backward(ctx: Context, grad_output: Tensor) -> Tensor:
+    def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
         """Sum function"""
         # TODO: Verify this is correct.
         (t1,) = ctx.saved_values
-        return t1.expand(grad_output)
+        return t1.expand(grad_output), 0.0
 
 
 class LT(Function):
@@ -226,7 +227,7 @@ class LT(Function):
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
         """Less than function"""
         t1_shape, t2_shape = ctx.saved_values
-        return minitorch.Tensor.zeros(t1_shape), minitorch.Tensor.zeros(t2_shape)
+        return zeros(t1_shape), zeros(t2_shape)
 
 
 class EQ(Function):
@@ -240,7 +241,7 @@ class EQ(Function):
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
         """Equality function"""
         t1_shape, t2_shape = ctx.saved_values
-        return minitorch.Tensor.zeros(t1_shape), minitorch.Tensor.zeros(t2_shape)
+        return zeros(t1_shape), zeros(t2_shape)
 
 
 class IsClose(Function):
@@ -258,19 +259,27 @@ class Permute(Function):
         ctx.save_for_backward(dims)
         t1_tensor_data = t1._tensor.permute(*[int(dims[i]) for i in range(dims.size)])
         return minitorch.Tensor.make(
-            t1_tensor_data._storage, t1_tensor_data.shape, backend=t1.backend
+            t1_tensor_data._storage,
+            t1_tensor_data.shape,
+            t1_tensor_data.strides,
+            backend=t1.backend,
         )
 
     @staticmethod
-    def backward(ctx: Context, grad_output: Tensor) -> Tensor:
+    def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
         """Permute dimensions of a tensor"""
         (dims,) = ctx.saved_values
-        grad_tensor_data = grad_output._tensor.permute(*dims)
-        return minitorch.Tensor.make(
+        inv_order = [0] * dims.size
+        for i in range(dims.size):
+            inv_order[int(dims[i])] = i
+        grad_tensor_data = grad_output._tensor.permute(*inv_order)
+        t1_grad = minitorch.Tensor.make(
             grad_tensor_data._storage,
-            grad_tensor_data.shape,
+            shape=grad_tensor_data.shape,
+            strides=grad_tensor_data.strides,
             backend=grad_output.backend,
         )
+        return t1_grad, 0.0
 
 
 class View(Function):
