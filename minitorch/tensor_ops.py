@@ -7,7 +7,6 @@ from typing_extensions import Protocol
 
 from . import operators
 from .tensor_data import (
-    MAX_DIMS,
     broadcast_index,
     index_to_position,
     shape_broadcast,
@@ -16,7 +15,7 @@ from .tensor_data import (
 
 if TYPE_CHECKING:
     from .tensor import Tensor
-    from .tensor_data import Index, Shape, Storage, Strides
+    from .tensor_data import Shape, Storage, Strides
 
 
 class MapProto(Protocol):
@@ -276,8 +275,8 @@ def tensor_map(
     ) -> None:
         # TODO: Implement for Task 2.3.
         for i in range(np.prod(out_shape)):
-            out_index = Index(MAX_DIMS)
-            in_index = Index(MAX_DIMS)
+            out_index = out_shape.copy()
+            in_index = in_shape.copy()
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, in_shape, in_index)
             in_position = index_to_position(in_index, in_strides)
@@ -330,9 +329,9 @@ def tensor_zip(
     ) -> None:
         # TODO: Implement for Task 2.3.
         for i in range(np.prod(out_shape)):
-            out_index = Index(MAX_DIMS)
-            a_index = Index(MAX_DIMS)
-            b_index = Index(MAX_DIMS)
+            out_index = out_shape.copy()
+            a_index = a_shape.copy()
+            b_index = b_shape.copy()
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, a_shape, a_index)
             broadcast_index(out_index, out_shape, b_shape, b_index)
@@ -372,18 +371,16 @@ def tensor_reduce(
         reduce_dim: int,
     ) -> None:
         # TODO: Implement for Task 2.3.
+        print(f"reduce: {out_shape}, {a_shape}, {reduce_dim}")
         for i in range(np.prod(out_shape)):
-            out_index = Index(MAX_DIMS)
-            a_index = Index(MAX_DIMS)
+            out_index = out_shape.copy()
             to_index(i, out_shape, out_index)
+            a_index = out_index.copy()
+            out_position = index_to_position(out_index, out_strides)
             for j in range(a_shape[reduce_dim]):
                 a_index[reduce_dim] = j
-                out_position = index_to_position(out_index, out_strides)
                 a_position = index_to_position(a_index, a_strides)
-                if j == 0:
-                    out[out_position] = a_storage[a_position]
-                else:
-                    out[out_position] = fn(out[out_position], a_storage[a_position])
+                out[out_position] = fn(out[out_position], a_storage[a_position])
 
     return _reduce
 
